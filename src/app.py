@@ -38,7 +38,7 @@ model = CustomModel().cpu().eval()
 # model.load_state_dict(torch.load('./src/model_t.pt', map_location=torch.device('cpu')))
 
 # Render にデプロイする際のコードは以下の通り
-model.load_state_dict(torch.load('./src/model_t.pt', map_location=torch.device('cpu')))
+model.load_state_dict(torch.load('./model_t.pt', map_location=torch.device('cpu')))
 
 # 画像の余白幅をピクセル単位で指定。これは後で画像を連結する際に使用。
 margin_w = 10
