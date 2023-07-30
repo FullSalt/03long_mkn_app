@@ -76,13 +76,16 @@ def predicts():
     print("0"*50)
     # リクエストがポストかどうかの判別
     if request.method == 'POST':
+        print("01"*50)
         # ファイルがなかった場合の処理
         if 'filename' not in request.files:
             return redirect(request.url)
         # index.htmlにアップロードされた filename と言うファイルデータを変数fileに代入。
+        print("02"*50)
         file = request.files['filename']
         # ファイルが存在し、指定されたファイル形式である場合、以下を実行。
         if file and allowed_file(file.filename):
+            print("03"*50)
 
             # Pythonの io.BytesIO を使って、バイト型のデータを一時的に保持するためのバッファ（一種の一時記憶領域）を作成。
             # 画像を一時的に保存し、その後の処理に使用するため。
