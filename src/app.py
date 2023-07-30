@@ -18,6 +18,11 @@ from PIL import Image
 import base64
 import uuid
 import os
+import psutil
+
+pid = os.getpid()
+# psutil.Processオブジェクトを作成
+p = psutil.Process(pid)
 
 # a_detection.py から前処理とネットワークの定義を読み込み
 from a_detection import CustomModel
@@ -50,7 +55,10 @@ prepocess = T.Compose([T.Resize((128,128)),
 
 ### 異常検知専用コード (終) ###
 
+mem_info = p.memory_info()
+mem_usage = mem_info.rss / 1024 / 1024  # rssはResident Set Sizeを表す
 
+print(f"Memory usage: {mem_usage} MB")
 
 # Flask のインスタンスを作成
 app = Flask(__name__)
@@ -65,6 +73,7 @@ def allowed_file(filename):
 # URL にアクセスがあった場合に、POSTリクエストされた場合に、predict関数が呼び出されて実行される。
 @app.route('/', methods = ['GET', 'POST'])
 def predicts():
+    print("0"*50)
     # リクエストがポストかどうかの判別
     if request.method == 'POST':
         # ファイルがなかった場合の処理
@@ -171,6 +180,12 @@ def predicts():
             # 最後に、render_template を用いて結果を表示するHTMLページ（'result.html'）をレンダリング（生成）。
             # その際、テンプレートに animalName_ と base64_data の2つの変数を渡している。
             # これらの変数は、'result.html'の中で使われ、動物の名前と画像を表示する。
+
+
+            mem_info = p.memory_info()
+            mem_usage = mem_info.rss / 1024 / 1024  # rssはResident Set Sizeを表す
+
+            print(f"Memory usage: {mem_usage} MB")
             return render_template('result.html', image=base64_data)
 
 
