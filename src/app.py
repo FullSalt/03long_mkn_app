@@ -34,6 +34,9 @@ from a_detection import CustomModel
 
 ### 異常検知専用コード (始) ###
 
+    # # 画像の余白幅をピクセル単位で指定。これは後で画像を連結する際に使用。
+    # margin_w = 10
+
 def predict(img):
 
     # ネットワークの準備
@@ -47,8 +50,7 @@ def predict(img):
     # Render にデプロイする際のコードは以下の通り
     model.load_state_dict(torch.load('./model_t.pt', map_location=torch.device('cpu')))
 
-    # 画像の余白幅をピクセル単位で指定。これは後で画像を連結する際に使用。
-    margin_w = 10
+
 
     # 画像の前処理を行うための変換関数を定義。画像を128x128にリサイズし、PyTorchのテンソルに変換、の2つの前処理を行う。
     prepocess = T.Compose([T.Resize((128,128)),
