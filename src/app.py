@@ -34,8 +34,8 @@ from a_detection import CustomModel
 
 ### 異常検知専用コード (始) ###
 
-    # # 画像の余白幅をピクセル単位で指定。これは後で画像を連結する際に使用。
-    # margin_w = 10
+# 画像の余白幅をピクセル単位で指定。これは後で画像を連結する際に使用。
+margin_w = 10
 
 def predict(img):
 
@@ -60,11 +60,46 @@ def predict(img):
     img = prepocess(img).unsqueeze(0)
 
     with torch.no_grad():
-        outputs = model(img)
+        output = model(img)[0]
 
-    return outputs
+    output = output.cpu().numpy().transpose(1,2,0)    
 
-### 異常検知専用コード (終) ###
+    output = np.uint8(np.maximum(np.minimum(output*255 ,255),0))
+
+    origin = np.uint8(img[0].cpu().numpy().transpose(1,2,0)*255)
+
+    diff = np.uint8(np.abs(output.astype(np.float32) - origin.astype(np.float32)))
+
+    heatmap = cv2.applyColorMap(diff , cv2.COLORMAP_JET)
+
+    margin = np.ones((diff.shape[0],margin_w,3))*255
+
+    result = np.concatenate([origin[:,:,::-1],margin,output[:,:,::-1],margin,heatmap],axis = 1)
+
+    return result
+
+
+# ### 異常検知専用コード (始) ###
+# # ネットワークの準備
+# model = CustomModel().cpu().eval()
+
+# # 学習済みモデルの重み ( model.pt ) を読み込み
+
+# # Visual Studio Code の際のコードは以下にコメントアウト
+# # model.load_state_dict(torch.load('./src/model_t.pt', map_location=torch.device('cpu')))
+
+# # Render にデプロイする際のコードは以下の通り
+# model.load_state_dict(torch.load('./model_t.pt', map_location=torch.device('cpu')))
+
+
+
+# # 画像の前処理を行うための変換関数を定義。画像を128x128にリサイズし、PyTorchのテンソルに変換、の2つの前処理を行う。
+# prepocess = T.Compose([T.Resize((128,128)),
+#                                 T.ToTensor(),
+#                                 ])
+
+
+# ### 異常検知専用コード (終) ###
 
 mem_info = p.memory_info()
 mem_usage = mem_info.rss / 1024 / 1024  # rssはResident Set Sizeを表す
@@ -115,25 +150,24 @@ def predicts():
             # バッチ次元追加でテンソルの形状は(1, C, H, W)になる。ここで、Cはチャネル数、Hは高さ、Wは幅を表す。    
             # img = prepocess(img).unsqueeze(0)
 
-            # # このコードブロック内では、PyTorchが勾配を計算するのを防ぎ、メモリ使用量を減らし、評価フェーズの計算を高速化。
+            # # # このコードブロック内では、PyTorchが勾配を計算するのを防ぎ、メモリ使用量を減らし、評価フェーズの計算を高速化。
             # with torch.no_grad():
 
-            #     # モデルに画像を通して結果を取得。結果はテンソルのリストとして返されるため、最初の要素を取得。
-            #     # [0]を使うことで、Autoencoderによる処理を経た後の最初のテンソル（再構築された出力テンソル）が取得されます。
+            # #     # モデルに画像を通して結果を取得。結果はテンソルのリストとして返されるため、最初の要素を取得。
+            # #     # [0]を使うことで、Autoencoderによる処理を経た後の最初のテンソル（再構築された出力テンソル）が取得されます。
             #     output = model(img)[0]
 
-            output = predict(img)
 
             print("2"*50)
 
             # Numpy配列に変換、さらに軸を変換（チャネル次元を最後に移動）。    
-            output = output.cpu().numpy().transpose(1,2,0)    
+            # output = output.cpu().numpy().transpose(1,2,0)    
 
             # output * 255: outputは0から1の範囲にスケーリングされた浮動小数点数の値を持つ多次元配列。この処理により値が0から255の範囲にスケーリングされる。
             # np.minimum(output * 255, 255): output * 255の結果と255との要素ごとの最小値を計算。これにより、値が255を超える場合には255にクリップされます。つまり、255を上限として値がクリップされる。
             # np.maximum(np.minimum(output * 255, 255), 0): 先ほどクリップした値と0との要素ごとの最大値を計算。これにより、値が0未満の場合には0にクリップ。つまり、0を下限として値がクリップされる。
             # np.uint8(...): 最後に、値を整数化。np.uint8はNumPyのデータ型の1つで、8ビット符号なし整数型。この操作により、値が小数点以下を持たない0から255の整数に変換。
-            output = np.uint8(np.maximum(np.minimum(output*255 ,255),0))
+            # output = np.uint8(np.maximum(np.minimum(output*255 ,255),0))
 
             print("3"*50)
 
@@ -141,7 +175,7 @@ def predicts():
             # img[0]: imgはPyTorchのテンソルで、バッチ次元を持つ。img[0]でバッチ次元を削除、最初の1つの画像データを取得。imgの形状が(1, C, H, W)から(C, H, W)に変更。
             # * 255: テンソルの値を255倍。0から1の範囲の浮動小数点数が0から255の整数にスケーリングされる。
             # 最終的に得られるのは、画像を0から255の整数値として表現されるNumpy多次元配列。画像データ操作・可視化に便利。
-            origin = np.uint8(img[0].cpu().numpy().transpose(1,2,0)*255)
+            # origin = np.uint8(img[0].cpu().numpy().transpose(1,2,0)*255)
 
             print("4"*50)
 
@@ -149,7 +183,7 @@ def predicts():
             # astype(np.float32)で、outputのデータ型を32ビット浮動小数点数に変換。後の計算で精度の高い演算が保証される。
             # np.abs()関数は、要素ごとに絶対値を計算するため、差の絶対値が取得できる。
             # np.uint8(...): 最後に、値を整数化。
-            diff = np.uint8(np.abs(output.astype(np.float32) - origin.astype(np.float32)))
+            # diff = np.uint8(np.abs(output.astype(np.float32) - origin.astype(np.float32)))
 
             print("5"*50)
 
@@ -158,7 +192,7 @@ def predicts():
             # 第一引数には2つの画像間の差異を表すグレースケール画像 diffを指定、第2引数にはカラーマップの種類を指定。
             # cv2.COLORMAP_JETは、OpenCVが提供するカラーマップの一つで、青から赤までの色で値を表現。
             # ヒートマップは、画像の差異を視覚的に表現し、特にデータの密度やパターンを強調するために使用。 
-            heatmap = cv2.applyColorMap(diff , cv2.COLORMAP_JET)
+            # heatmap = cv2.applyColorMap(diff , cv2.COLORMAP_JET)
 
             print("6"*50)
 
@@ -167,16 +201,18 @@ def predicts():
             # np.ones()関数で全ての要素が1の多次元配列を生成。(diff.shape[0], margin_w, 3)の形状の多次元配列を作成。3はカラーチャンネルの数（RGB）。
             # * 255: 上記の多次元配列にスカラー値255を乗算、全ての要素が255（白色）になる。
             # diffと同じ高さとマージンの幅を持つ白いカラー画像（マージン）を生成。画像間に白い余白を作成して区別しやすくする。
-            margin = np.ones((diff.shape[0],margin_w,3))*255
+            # margin = np.ones((diff.shape[0],margin_w,3))*255
 
             print("7"*50)
 
             # 3つのNumPyの多次元配列（origin、margin、output、heatmap）を横に連結して1つのカラー画像（result）を作成。
             # origin & output はNumPyの多次元配列であり、RGB形式のカラー画像。RGBチャンネルの順序を逆転させることにより、青、緑、赤の順で並べ替えられたカラー画像に変換。
             # np.concatenate()関数を使って、上記の4つの多次元配列を横に連結して1つのカラー画像に結合。axis=1は、連結の方向を示し、1は横方向（列方向）。
-            result = np.concatenate([origin[:,:,::-1],margin,output[:,:,::-1],margin,heatmap],axis = 1)
+            # result = np.concatenate([origin[:,:,::-1],margin,output[:,:,::-1],margin,heatmap],axis = 1)
 
             print("8"*50)
+
+            result = predict(img)
 
             # 異常検知専用コードで得られた result を、image に入れ替えて、強制的にキカガクのコードに接続。
 
@@ -185,7 +221,7 @@ def predicts():
             image = Image.fromarray(result_rgb)
 
             ### 異常検知専用コード (終) ###
-            image = Image.open(file).convert('RGB')
+            # image = Image.open(file).convert('RGB')
 
             print("9"*50)
 
@@ -229,4 +265,4 @@ def predicts():
 
 # アプリケーションの実行の定義
 if __name__ == '__main__':
-    app.run(debug=False)
+    app.run(debug=True)
