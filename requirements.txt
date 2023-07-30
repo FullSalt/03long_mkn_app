@@ -12,3 +12,4 @@ pillow==9.2.0
 torch==1.12.1+cpu
 pytorch-lightning==2.0.2
 torchvision==0.13.1+cpu
+psutil==5.8.0
