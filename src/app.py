@@ -34,24 +34,33 @@ from a_detection import CustomModel
 
 ### 異常検知専用コード (始) ###
 
-# ネットワークの準備
-model = CustomModel().cpu().eval()
+def predict(img):
 
-# 学習済みモデルの重み ( model.pt ) を読み込み
+    # ネットワークの準備
+    model = CustomModel().cpu().eval()
 
-# Visual Studio Code の際のコードは以下にコメントアウト
-# model.load_state_dict(torch.load('./src/model_t.pt', map_location=torch.device('cpu')))
+    # 学習済みモデルの重み ( model.pt ) を読み込み
 
-# Render にデプロイする際のコードは以下の通り
-model.load_state_dict(torch.load('./model_t.pt', map_location=torch.device('cpu')))
+    # Visual Studio Code の際のコードは以下にコメントアウト
+    # model.load_state_dict(torch.load('./src/model_t.pt', map_location=torch.device('cpu')))
 
-# 画像の余白幅をピクセル単位で指定。これは後で画像を連結する際に使用。
-margin_w = 10
+    # Render にデプロイする際のコードは以下の通り
+    model.load_state_dict(torch.load('./model_t.pt', map_location=torch.device('cpu')))
 
-# 画像の前処理を行うための変換関数を定義。画像を128x128にリサイズし、PyTorchのテンソルに変換、の2つの前処理を行う。
-prepocess = T.Compose([T.Resize((128,128)),
-                                T.ToTensor(),
-                                ])
+    # 画像の余白幅をピクセル単位で指定。これは後で画像を連結する際に使用。
+    margin_w = 10
+
+    # 画像の前処理を行うための変換関数を定義。画像を128x128にリサイズし、PyTorchのテンソルに変換、の2つの前処理を行う。
+    prepocess = T.Compose([T.Resize((128,128)),
+                                    T.ToTensor(),
+                                    ])
+
+    img = prepocess(img).unsqueeze(0)
+
+    with torch.no_grad():
+        outputs = model(img)
+
+    return outputs
 
 ### 異常検知専用コード (終) ###
 
@@ -102,14 +111,16 @@ def predicts():
             # unsqueeze(0)でバッチ次元を追加、1つの画像テンソルを1つのバッチとして扱えるようになる。
             # モデルにデータをバッチとして入力するために必要。
             # バッチ次元追加でテンソルの形状は(1, C, H, W)になる。ここで、Cはチャネル数、Hは高さ、Wは幅を表す。    
-            img = prepocess(img).unsqueeze(0)
+            # img = prepocess(img).unsqueeze(0)
 
-            # このコードブロック内では、PyTorchが勾配を計算するのを防ぎ、メモリ使用量を減らし、評価フェーズの計算を高速化。
-            with torch.no_grad():
+            # # このコードブロック内では、PyTorchが勾配を計算するのを防ぎ、メモリ使用量を減らし、評価フェーズの計算を高速化。
+            # with torch.no_grad():
 
-                # モデルに画像を通して結果を取得。結果はテンソルのリストとして返されるため、最初の要素を取得。
-                # [0]を使うことで、Autoencoderによる処理を経た後の最初のテンソル（再構築された出力テンソル）が取得されます。
-                output = model(img)[0]
+            #     # モデルに画像を通して結果を取得。結果はテンソルのリストとして返されるため、最初の要素を取得。
+            #     # [0]を使うことで、Autoencoderによる処理を経た後の最初のテンソル（再構築された出力テンソル）が取得されます。
+            #     output = model(img)[0]
+
+            output = predict(img)
 
             # print("2"*50)
 
@@ -216,4 +227,4 @@ def predicts():
 
 # アプリケーションの実行の定義
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(debug=False)
